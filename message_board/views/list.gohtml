@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>所有文章 -- 我的技术博客 </title>
+    <style type="text/css"> </style>
+</head>
+
+
+<body>
+    <h1>所有文章 </h1>
+    <ul>
+        {{ range $key , $article := .}}
+            <li>{{ $article.Title }}</li>
+        {{ end }}
+    </ul>
+
+</body>
+</html>

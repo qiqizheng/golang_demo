@@ -73,6 +73,7 @@ type ArticlesFormData struct {
 
 var router = mux.NewRouter()
 
+// 添加数据界面
 func createFunc(w http.ResponseWriter, r *http.Request) {
 	// fmt.Fprint(w, "留言板界面")
 
@@ -98,6 +99,39 @@ func createFunc(w http.ResponseWriter, r *http.Request) {
 	// fmt.Fprintf(w, tmpl, storeURL)
 }
 
+// Article 对应定义一条文章数据结构体
+type Article struct {
+	Title, Body string
+	ID          int64
+}
+
+// 文章列表
+func createlistFunc(w http.ResponseWriter, r *http.Request) {
+
+	// 查询数据
+	rows, err := db.Query("SELECT * from articles")
+
+	defer rows.Close()
+	var articles []Article
+
+	//循环读取结果
+	for rows.Next() {
+		var article Article
+		err := rows.Scan(&article.ID, &article.Title, &article.Body)
+
+		checkError(err)
+
+		articles = append(articles, article)
+	}
+
+	tmpl, err := template.ParseFiles("views/list.gohtml")
+	if err != nil {
+		panic(err)
+	}
+
+	err = tmpl.Execute(w, articles)
+}
+
 // 添加数据
 func createdataFunc(w http.ResponseWriter, r *http.Request) {
 	title := r.PostFormValue("title")
@@ -111,26 +145,6 @@ func createdataFunc(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "500 服务器内部错误")
 	}
 
-	// var (
-	// 	// id   int64
-	// 	err  error
-	// 	rs   sql.Result
-	// 	stmt *sql.Stmt
-	// )
-
-	// stmt, err = db.Prepare("INSERT INTO article(title, body) values(?, ?)")
-
-	// if err != nil {
-	// 	return 0, err
-	// }
-	// defer stmt.Close()
-
-	// rs, err = stmt.Exec(title, body)
-	// if id, err = rs.LastInsertId(); id > 0 {
-	// 	return id, nil
-	// }
-
-	// return 0, err
 }
 
 // 插入数据
@@ -193,6 +207,8 @@ func main() {
 	// router.HandleFunc("/articles", createdataFunc).Methods("POST").Name("articles.store")
 	router.HandleFunc("/articles/create", createFunc).Methods("GET").Name("articles.create")
 	router.HandleFunc("/articles", createdataFunc).Methods("POST").Name("articles.store")
+
+	router.HandleFunc("/articles/list", createlistFunc).Methods("GET").Name("articles.list")
 
 	//中间件
 	router.Use(forceHTMLMiddleware)
