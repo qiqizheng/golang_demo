@@ -105,6 +105,13 @@ type Article struct {
 	ID          int64
 }
 
+// func (a Article) Link() string {
+// 	showURL, _ := router.Get("articles.show").URL("id", strconv.FormatInt(a.ID, 10))
+
+// 	return showURL.string()
+
+// }
+
 // 文章列表
 func createlistFunc(w http.ResponseWriter, r *http.Request) {
 
@@ -183,6 +190,22 @@ func saveArticleTODB(title string, body string) (int64, error) {
 
 }
 
+// 展示数据
+func showFunc(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	id := vars["id"]
+
+	article := Article{}
+	query := "SELECT * FROM articles where id = ?"
+	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+
+	tmpl, err := template.ParseFiles("views/show.gohtml")
+	err = tmpl.Execute(w, article)
+	fmt.Fprintf(w, "文章id"+id)
+	checkError(err)
+}
+
 func removeTrailingSlash(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -209,6 +232,7 @@ func main() {
 	router.HandleFunc("/articles", createdataFunc).Methods("POST").Name("articles.store")
 
 	router.HandleFunc("/articles/list", createlistFunc).Methods("GET").Name("articles.list")
+	router.HandleFunc("/articles/{id:[0-9]+}", showFunc).Methods("GET").Name("articles.show")
 
 	//中间件
 	router.Use(forceHTMLMiddleware)
