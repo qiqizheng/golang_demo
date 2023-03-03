@@ -206,6 +206,52 @@ func showFunc(w http.ResponseWriter, r *http.Request) {
 	checkError(err)
 }
 
+func editFunc(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	article := Article{}
+	query := "SELECT * FROM articles where id = ?"
+	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+
+	updateURL, _ := router.Get("articles.update").URL("id", id)
+	data := ArticlesFormData{
+		Title:  article.Title,
+		Body:   article.Body,
+		URL:    updateURL,
+		Errors: nil,
+	}
+
+	tmpl, err := template.ParseFiles("views/edit.gohtml")
+	err = tmpl.Execute(w, data)
+	fmt.Fprintf(w, "文章id"+article.Body)
+
+	checkError(err)
+}
+
+func updateFunc(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	//1. 获取参数
+	title := r.PostFormValue("title")
+	body := r.PostFormValue("body")
+
+	query := "UPDATE articles SET title = ?, body = ? where id = ?"
+	rs, err := db.Exec(query, title, body, id)
+
+	if n, _ := rs.RowsAffected(); n > 0 {
+		showURL, _ := router.Get("articles.show").URL("id", id)
+		http.Redirect(w, r, showURL.String(), http.StatusFound)
+	} else {
+		fmt.Fprint(w, "您没有做任何更改")
+	}
+
+	checkError(err)
+	fmt.Fprintf(w, "更新文章")
+}
+
 func removeTrailingSlash(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -231,7 +277,14 @@ func main() {
 	router.HandleFunc("/articles/create", createFunc).Methods("GET").Name("articles.create")
 	router.HandleFunc("/articles", createdataFunc).Methods("POST").Name("articles.store")
 
+	//编辑数据页面
+	router.HandleFunc("/articles/{id:[0-9]+}/edit", editFunc).Methods("GET").Name("articles.edit")
+	//更新数据
+	router.HandleFunc("/articles/{id:[0-9]+}", updateFunc).Methods("POST").Name("articles.update")
+
 	router.HandleFunc("/articles/list", createlistFunc).Methods("GET").Name("articles.list")
+
+	//展示数据
 	router.HandleFunc("/articles/{id:[0-9]+}", showFunc).Methods("GET").Name("articles.show")
 
 	//中间件
